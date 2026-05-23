@@ -133,14 +133,16 @@ def main():
                        help="Operation mode")
     parser.add_argument("--count", type=int, default=None,
                        help="Number of initial configs (init mode)")
+    parser.add_argument("--binary", default=None,
+                       help="Path to target binary (for warmup)")
 
     args = parser.parse_args()
 
     if args.mode == "init":
         init_config_pool(args.target, args.afl_output, args.count)
 
-        # Run warmup calibration if depth model and seeds are available
-        if args.depth_model and args.afl_output:
+        # Run warmup calibration if depth model, seeds, and binary are available
+        if args.depth_model and args.afl_output and args.binary:
             try:
                 from deepfuzz_warmup import run_warmup
                 import os as _os
@@ -153,7 +155,7 @@ def main():
                     with open(config_path) as f:
                         configs = [l.strip() for l in f if l.strip()][:3]
                 run_warmup(
-                    binary="",
+                    binary=args.binary,
                     depth_model_path=args.depth_model,
                     seed_dir=seed_dir,
                     configs=configs,

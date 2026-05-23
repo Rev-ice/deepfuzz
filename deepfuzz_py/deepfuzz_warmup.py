@@ -22,73 +22,77 @@ import subprocess
 import tempfile
 from typing import Dict, List, Optional
 
+try:
+    import sysv_ipc
+    HAS_SYSV_IPC = True
+except ImportError:
+    HAS_SYSV_IPC = False
+
 
 # Must match depth_shm_data_t in deepfuzz-depth.h (8 bytes)
 DEPTH_SHM_SIZE = 8
 
-def _create_depth_shm() -> Optional[int]:
-    """Create a POSIX shared memory segment for depth data. Returns shm fd."""
+def _create_depth_shm():
+    """Create a SysV shared memory segment matching C __deepfuzz_depth_init.
+    Returns sysv_ipc.SharedMemory or None."""
+    if not HAS_SYSV_IPC:
+        return None
     try:
-        import mmap
-        name = f"/deepfuzz_warmup_{os.getpid()}_{int(time.time())}"
-        fd = os.open(f"/tmp/deepfuzz_shm_{os.getpid()}", os.O_CREAT | os.O_RDWR)
-        os.ftruncate(fd, DEPTH_SHM_SIZE)
-        return fd
+        shm = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREAT, size=DEPTH_SHM_SIZE)
+        os.environ["__DEEPFUZZ_DEPTH_SHM_ID"] = str(shm.id)
+        shm.write(b'\x00' * DEPTH_SHM_SIZE)
+        return shm
     except Exception:
         return None
 
 
-def _read_depth_shm(fd: int) -> int:
-    """Read max_call_depth from the SHM segment. Returns 0 on failure."""
+def _read_depth_shm(shm) -> int:
+    """Read max_call_depth from SysV SHM. Returns 0 on failure."""
     try:
-        os.lseek(fd, 0, os.SEEK_SET)
-        data = os.read(fd, DEPTH_SHM_SIZE)
-        if len(data) >= 8:
-            max_depth, cur_depth = struct.unpack("II", data[:8])
-            return max_depth
+        data = shm.read(DEPTH_SHM_SIZE)
+        max_depth, cur_depth = struct.unpack("II", data)
+        return max_depth
     except Exception:
-        pass
-    return 0
+        return 0
 
 
-def _reset_depth_shm(fd: int):
+def _reset_depth_shm(shm):
     """Reset depth SHM to zero."""
     try:
-        os.lseek(fd, 0, os.SEEK_SET)
-        os.write(fd, b'\x00' * DEPTH_SHM_SIZE)
+        shm.write(b'\x00' * DEPTH_SHM_SIZE)
     except Exception:
         pass
 
 
 def run_single(binary: str, input_data: bytes, config: str,
-               shm_fd: int, timeout: int = 10) -> int:
+               shm, timeout: int = 10) -> int:
     """Run target binary once with given input and config, return max call depth.
 
     Args:
         binary: Path to target binary
         input_data: Input bytes (seed file content)
         config: Config string (e.g. "-d -k")
-        shm_fd: File descriptor for depth SHM
+        shm: sysv_ipc.SharedMemory segment
         timeout: Timeout in seconds
 
     Returns:
         Max call depth observed (0 if not available)
     """
-    _reset_depth_shm(shm_fd)
+    _reset_depth_shm(shm)
 
     env = os.environ.copy()
-    env["__DEEPFUZZ_DEPTH_SHM_ID"] = str(shm_fd)
+    env["__DEEPFUZZ_DEPTH_SHM_ID"] = str(shm.id)
 
+    seed_path = ""
     try:
         # Write input to temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".seed") as tf:
             tf.write(input_data)
             seed_path = tf.name
 
-        # Build command
         cmd_parts = [binary] + config.split() + [seed_path]
 
-        proc = subprocess.run(
+        subprocess.run(
             cmd_parts,
             env=env,
             stdout=subprocess.DEVNULL,
@@ -96,16 +100,13 @@ def run_single(binary: str, input_data: bytes, config: str,
             timeout=timeout,
         )
 
-        depth = _read_depth_shm(shm_fd)
+        return _read_depth_shm(shm)
 
-        os.unlink(seed_path)
-        return depth
-
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
-        # Target not instrumented or failed to run
-        if os.path.exists(seed_path):
-            os.unlink(seed_path)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return 0
+    finally:
+        if seed_path and os.path.exists(seed_path):
+            os.unlink(seed_path)
 
 
 def run_warmup(
@@ -146,9 +147,9 @@ def run_warmup(
     print(f"[*] Warmup: {len(seeds)} seeds x {len(configs)} configs "
           f"(limited to {max_runs} runs)")
 
-    # Create depth SHM
-    shm_fd = _create_depth_shm()
-    if shm_fd is None:
+    # Create depth SHM (SysV, matching C layer shmget/shmat)
+    shm = _create_depth_shm()
+    if shm is None:
         print("[*] Warmup: could not create depth SHM, using static model only")
         return depth_model_path
 
@@ -164,13 +165,10 @@ def run_warmup(
                 if runs_done >= max_runs:
                     break
 
-                depth = run_single(binary, seed, config, shm_fd,
+                depth = run_single(binary, seed, config, shm,
                                    timeout=min(timeout, 10))
 
                 if depth > 0:
-                    # Record the observed call depth — this is an
-                    # inter-procedural signal. Map to all edges in the
-                    # static model by raising the floor.
                     for edge_id_str in model.get("edges", {}):
                         eid = int(edge_id_str)
                         if eid not in dynamic_observations or \
@@ -180,7 +178,11 @@ def run_warmup(
                 runs_done += 1
 
     finally:
-        os.close(shm_fd)
+        try:
+            shm.detach()
+            shm.remove()
+        except Exception:
+            pass
 
     if dynamic_observations:
         model = fuse_static_dynamic(model, dynamic_observations)

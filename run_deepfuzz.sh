@@ -112,12 +112,18 @@ cd "${SCRIPT_DIR}"
 make clean > /dev/null 2>&1 || true
 make -j"$(nproc 2>/dev/null || echo 4)" afl-fuzz
 
-# Run
-exec ./afl-fuzz \
+# Cleanup handler
+cleanup() {
+    echo "[*] Cleaning up..."
+    kill ${DAEMON_PID} 2>/dev/null || true
+    wait ${DAEMON_PID} 2>/dev/null || true
+    echo "[*] DeepFuzz finished."
+}
+trap cleanup EXIT INT TERM
+
+# Run (no exec — trap must execute on exit)
+./afl-fuzz \
     -i "${SEED_DIR}" \
     -o "${OUT_DIR}" \
     -J "${DEPTH_MODEL}" \
     -- "${TARGET_BIN}" @@
-
-# Cleanup on exit
-kill ${DAEMON_PID} 2>/dev/null || true

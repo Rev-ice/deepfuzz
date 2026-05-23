@@ -3729,6 +3729,18 @@ __attribute__((constructor(102))) static void __deepfuzz_depth_init(void) {
 
 }
 
+__attribute__((destructor, no_instrument_function))
+static void __deepfuzz_depth_fini(void) {
+
+  if (__afl_depth_shm) {
+
+    shmdt(__afl_depth_shm);
+    __afl_depth_shm = NULL;
+
+  }
+
+}
+
 __attribute__((no_instrument_function))
 void __cyg_profile_func_enter(void *func, void *caller) {
 
