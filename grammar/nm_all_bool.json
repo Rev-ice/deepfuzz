@@ -1,0 +1,49 @@
+{
+    "cmdline":  "$inopts $INPUTFILE",
+    "connector": "=",
+    "strmax":   3,
+    "options":  [
+      {"opt": "-a", "type": "bool"},
+      {"opt": "-A", "type": "bool"},
+      {"opt": "-B", "type": "bool"},
+      {"opt": "-C", "type": "bool"},
+      {"opt": "--no-demangle", "type": "bool"},
+      {"opt": "--recurse-limit", "type": "bool"},
+      {"opt": "--no-recurse-limit", "type": "bool"},
+      {"opt": "-D", "type": "bool"},
+      {"opt": "--defined-only", "type": "bool"},
+      {"opt": "-e", "type": "bool"},
+      {"opt": "-f", "type": "bool"},
+      {"opt": "-g", "type": "bool"},
+      {"opt": "-j", "type": "bool"},
+      {"opt": "-l", "type": "bool"},
+      {"opt": "-n", "type": "bool"},
+      {"opt": "-o", "type": "bool"},
+      {"opt": "-p", "type": "bool"},
+      {"opt": "-P", "type": "bool"},
+      {"opt": "-r", "type": "bool"},
+      {"opt": "-S", "type": "bool"},
+      {"opt": "-s", "type": "bool"},
+      {"opt": "--quiet", "type": "bool"},
+      {"opt": "--size-sort", "type": "bool"},
+      {"opt": "--special-syms", "type": "bool"},
+      {"opt": "--synthetic", "type": "bool"},
+      {"opt": "-t", "type": "bool"},
+      {"opt": "-u", "type": "bool"},
+      {"opt": "--with-symbol-versions", "type": "bool"}
+    ],
+    "depend":   [
+                ],
+    "conflict": [["--defined-only", "-u"],
+                 ["-n", "-p"],
+                 ["-n", "-r"],
+                 ["-n", "--size-sort"],
+                 ["-p", "-r"],
+                 ["-p", "--size-sort"],
+                 ["-r", "--size-sort"],
+                 ["--recurse-limit", "--no-recurse-limit"]
+                ],
+    "maxcombs": 18
+                
+}
+

@@ -1,0 +1,41 @@
+{
+    "cmdline":  "$inopts -i $INPUTFILE /dev/null",
+    "connector": " ",
+    "strmax": 3,
+    "options":  [
+                  {"opt":     "-apad",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-reinit_filter",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-discard",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-disposition",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-vn",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-dn",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-an",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-sn",
+                   "type":    "bool"
+                  },
+                  {"opt":     "-fix_sub_duration",
+                   "type":    "bool"
+                  }
+                 ],
+     "depend":   [
+                 ],
+     "conflict": [
+                  ["-vn", "-dn"],
+                  ["-sn", "-fix_sub_duration"]
+                 ],
+     "maxcombs": 28
+}

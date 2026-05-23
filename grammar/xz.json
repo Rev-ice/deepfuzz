@@ -1,0 +1,26 @@
+{
+  "options": [
+    {"opt": "-z", "type": "bool"},
+    {"opt": "-d", "type": "bool"},
+    {"opt": "-t", "type": "bool"},
+    {"opt": "-l", "type": "bool"},
+    {"opt": "-k", "type": "bool"},
+    {"opt": "-f", "type": "bool"},
+    {"opt": "-c", "type": "bool"},
+    {"opt": "--no-sparse", "type": "bool"},
+    {"opt": "-F", "type": "choice", "choices": ["auto", "xz", "lzma", "raw"], "connector": "="},
+    {"opt": "-0", "type": "bool"},
+    {"opt": "-1", "type": "bool"},
+    {"opt": "-2", "type": "bool"},
+    {"opt": "-3", "type": "bool"},
+    {"opt": "-4", "type": "bool"},
+    {"opt": "-5", "type": "bool"},
+    {"opt": "-6", "type": "bool"},
+    {"opt": "-7", "type": "bool"},
+    {"opt": "-8", "type": "bool"},
+    {"opt": "-9", "type": "bool"},
+    {"opt": "--memlimit-compress", "type": "intnum", "range": [1, 4096], "connector": "="},
+    {"opt": "--block-size", "type": "intnum", "range": [1, 4096], "connector": "="},
+    {"opt": "--threads", "type": "intnum", "range": [1, 64], "connector": "="}
+  ]
+}

@@ -1,0 +1,35 @@
+{
+    "cmdline":  "-d $inopts $INPUTFILE",
+    "connector": "=",
+    "strmax":   3,
+    "options":  [
+                {"opt": "-a", "type": "bool"},
+                {"opt": "-f", "type": "bool"},
+                {"opt": "-p", "type": "bool"},
+                {"opt": "-P", "type": "bool"},
+                {"opt": "-h", "type": "bool"},
+                {"opt": "-x", "type": "bool"},
+                {"opt": "-d", "type": "bool"},
+                {"opt": "-D", "type": "bool"},
+                {"opt": "-S", "type": "bool"},
+                {"opt": "-s", "type": "bool"},
+                {"opt": "-g", "type": "bool"},
+                {"opt": "-e", "type": "bool"},
+                {"opt": "-G", "type": "bool"},
+                {"opt": "-W", "type": "bool"},
+                {"opt": "-Wk", "type": "bool"},
+                {"opt": "-WK", "type": "bool"},
+                {"opt": "-WN", "type": "bool"},
+                {"opt": "-L", "type": "bool"},
+                {"opt": "-t", "type": "bool"},
+                {"opt": "-T", "type": "bool"},
+                {"opt": "-r", "type": "bool"},
+                {"opt": "-R", "type": "bool"}
+      ],
+     "depend":   [
+                 ],
+     "conflict": [["--recurse-limit", "--no-recurse-limit"]
+                 ],
+     "maxcombs": 42
+}
+

@@ -1,0 +1,29 @@
+{
+    "cmdline":  "$inopts $STDIN",
+    "connector": "=",
+    "strmax":   3,
+    "options":  [{"opt":     "--strip-underscore",
+                               "type":    "bool"},
+                              {"opt":     "-n",
+                               "type":    "bool"},
+                              {"opt":     "-p",
+                               "type":    "bool"},
+                              {"opt":     "-i",
+                               "type":    "bool"},
+                              {"opt":     "-R",
+                               "type":    "bool"},
+                              {"opt":     "-t",
+                               "type":    "bool"},
+                              {"opt":     "-r",
+                               "type":    "bool"},
+                              {"opt":     "-s",
+                               "type":    "bool"}
+                             ],
+    "depend":   [
+                ],
+    "conflict": [["--strip-underscore", "-n"],
+                 ["-r", "--recurse-limit"]
+                ],
+    "maxcombs": 6
+}
+
