@@ -72,6 +72,20 @@ python3 "${DEEPFUZZ_PY}/deepfuzz_build_depth_model.py" \
 EOFPLACEHOLDER
 }
 
+# Step 2b: Warmup — dynamic depth calibration
+echo "[*] Running warmup phase..."
+python3 "${DEEPFUZZ_PY}/deepfuzz_warmup.py" \
+    --binary "${TARGET_BIN}" \
+    --seeds "${SEED_DIR}" \
+    --depth-model "${DEPTH_MODEL}" \
+    --output "${OUT_DIR}" 2>/dev/null && {
+    # use calibrated model if warmup succeeded
+    if [ -f "${OUT_DIR}/depth_model_calibrated.json" ]; then
+        DEPTH_MODEL="${OUT_DIR}/depth_model_calibrated.json"
+        echo "[*] Using calibrated depth model"
+    fi
+} || echo "[*] Warmup skipped (target may not be instrumented with -finstrument-functions)"
+
 # Step 3: Init config pool
 echo "[*] Initializing config pool..."
 python3 "${DEEPFUZZ_PY}/deepfuzz_main.py" \

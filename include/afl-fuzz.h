@@ -1057,6 +1057,7 @@ typedef struct afl_state {
 
   FILE *affinity_log_fp;             /* file handle for affinity_log.jsonl     */
   char *affinity_log_path;           /* path to affinity log file              */
+  u32   affinity_log_count;          /* count of written log entries           */
 
   /* ===== DeepFuzz: Config Pool (from Python layer) ===== */
 

@@ -77,15 +77,35 @@ def config_str_to_options_dict(config_str: str) -> Dict[str, str]:
     return result
 
 
-def options_dict_to_config_str(opts: Dict[str, str]) -> str:
-    """Convert {option_name: value} dict back to config string."""
+def options_dict_to_config_str(opts: Dict[str, str],
+                               target: "TargetConfig" = None) -> str:
+    """Convert {option_name: value} dict back to config string.
+
+    Uses target type definitions to decide output format:
+    - bool:   present=key, absent=omit
+    - others: always key=val or key val
+    """
+    # Build type lookup from target
+    opt_type = {}
+    if target:
+        for bo in target.bool_opts:
+            opt_type[bo.name] = "bool"
+        for eo in target.enum_opts:
+            opt_type[eo.name] = "enum"
+        for io in target.int_opts:
+            opt_type[io.name] = "intnum"
+        for so in target.string_opts:
+            opt_type[so.name] = "string"
+
     parts = []
     for name, val in opts.items():
-        if val == "1":
-            parts.append(name)
-        elif val == "0":
-            pass  # bool flag absent
+        typ = opt_type.get(name, "bool")
+
+        if typ == "bool":
+            if val and val != "0":
+                parts.append(name)
         else:
+            # int, float, enum, string — always emit with value
             if "=" in name or name.endswith("="):
                 parts.append(f"{name}{val}")
             else:
@@ -237,7 +257,7 @@ def mutate_config(target: TargetConfig, config: Config,
     else:
         new_dict = current_dict
 
-    new_str = options_dict_to_config_str(new_dict)
+    new_str = options_dict_to_config_str(new_dict, target)
     return Config(options_str=new_str, score=config.score,
                   max_depth=config.max_depth)
 
@@ -268,7 +288,7 @@ def generate_initial_configs(target_name: str, count: int = 50) -> List[Config]:
                 if val is not None:
                     opts_dict[name] = val
 
-        cfg_str = options_dict_to_config_str(opts_dict)
+        cfg_str = options_dict_to_config_str(opts_dict, target)
         if cfg_str.strip():
             configs.append(Config(options_str=cfg_str))
 

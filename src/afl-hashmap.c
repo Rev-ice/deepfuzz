@@ -1,3 +1,10 @@
+/*
+   afl-hashmap.c -- option hashmap implementation
+   Retained from VAFuzz (UTD-FAST-Lab/VAFuzz).
+   Used for config string hashing in afl-variability.c.
+   No modifications from original.
+ */
+
 #include "afl-hashmap.h"
 #include "afl-fuzz.h"
 

@@ -2144,14 +2144,26 @@ havoc_stage:
 
   if (unlikely(afl->stage_max < HAVOC_MIN)) { afl->stage_max = HAVOC_MIN; }
 
-  /* DeepFuzz: depth-aware mutation strategy
-   *   Deep seeds (>= threshold): precise (1-4 stacked mutations)
-   *   Shallow seeds (< threshold): aggressive (1-64 stacked mutations) */
+  /* DeepFuzz: depth-aware mutation strategy (three-tier)
+   *
+   *   Very deep (>= 1.5x threshold): havoc_stack_pow2 = 2  → 1-4  precise
+   *   Medium     (>= threshold):     havoc_stack_pow2 = 4  → 1-16 balanced (AFL++ default)
+   *   Shallow    (<  threshold):     havoc_stack_pow2 = 6  → 1-64 aggressive
+   *
+   *   Rationale: deep paths are fragile — small mutations preserve the path;
+   *   shallow paths need aggressive mutation to break into deeper code. */
   if (afl->depth_mode_active && afl->depth_model.loaded && afl->queue_cur) {
 
-    if (deepfuzz_is_deep_seed(afl, afl->queue_cur)) {
+    double d = afl->queue_cur->depth_info.max_combined_depth;
+    double t = afl->depth_model.depth_threshold;
+
+    if (d >= t * 1.5) {
 
       afl->havoc_stack_pow2 = 2;   /* 1-4  precise */
+
+    } else if (d >= t) {
+
+      afl->havoc_stack_pow2 = 4;   /* 1-16 balanced (AFL++ default) */
 
     } else {
 

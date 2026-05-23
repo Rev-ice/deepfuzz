@@ -1,8 +1,9 @@
 /*
-   DeepFuzz -- variability / config injection header (trimmed from VAFuzz)
+   DeepFuzz -- variability / config injection header
    ------------------------------------
-   Retained: config injection, argv havoc, grammar parsing
-   Removed:  Z3/PC/regression declarations, variability_driver
+   Trimmed from VAFuzz (UTD-FAST-Lab/VAFuzz).
+   Retained: config injection, argv havoc, grammar parsing.
+   Removed:  Z3/PC/regression declarations, variability_driver.
  */
 
 #ifndef AFL_VARIABILITY_H

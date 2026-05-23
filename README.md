@@ -20,9 +20,23 @@ Python outer layer (heavy logic)          C inner layer (performance-critical)
 ## Prerequisites
 
 - **macOS or Linux** (tested on macOS ARM64, Linux x86_64)
-- **AFL++ 4.40c** — download from https://github.com/AFLplusplus/AFLplusplus/releases/tag/v4.40c
+- **AFL++ 4.40c (exact version required)**
+  - Download: https://github.com/AFLplusplus/AFLplusplus/releases/tag/v4.40c
+  - ⚠️ Do NOT use AFL++ stable/dev branch — API may be incompatible with overlay patches
+- **clang/LLVM 14+** (for `afl-clang-fast` instrumentation)
 - **json-c** — `brew install json-c` (macOS) or `apt install libjson-c-dev` (Linux)
 - **Python 3.9+** with `angr`, `networkx`, `scikit-learn`, `numpy`
+
+### Target binary compilation
+
+For runtime depth instrumentation, compile the target with:
+
+```bash
+CC=./afl-clang-fast CFLAGS="-finstrument-functions -fno-optimize-sibling-calls" ./configure
+make
+```
+
+If `-finstrument-functions` is not used, DeepFuzz falls back to static-only depth model (no dynamic calibration).
 
 ## Quick Start
 
@@ -122,7 +136,7 @@ To add a new target, define its `TargetConfig` in `deepfuzz_typed_config.py` and
 ## Key Design Decisions
 
 1. **AFL++ 4.40c base (not VAFuzz)**: Ported only the config co-execution framework (~700 lines) from VAFuzz. Removed Z3/PC/regression/GSL/embedded-Python (~3400 lines of VAFuzz dead code).
-2. **File-based Python↔C communication**: No embedded CPython. JSON files + POSIX shared memory.
+2. **File-based Python↔C communication**: No embedded CPython. `config_set.json` is plain text (one config string per line). `depth_model.json` is JSON. `affinity_log.jsonl` is JSONL. Plus POSIX shared memory for coverage bitmap and depth SHM.
 3. **Hybrid two-level depth model**: `combined_depth = inter_depth + intra_depth/(max_intra+1)`, fused with runtime `__cyg_profile` observations via `max(static, dynamic)`.
 
 ## License

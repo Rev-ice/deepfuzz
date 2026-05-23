@@ -2622,6 +2622,14 @@ int main(int argc, char **argv_orig, char **envp) {
       snprintf(log_path, PATH_MAX, "%s/affinity_log.jsonl", afl->out_dir);
       afl->affinity_log_path = ck_strdup(log_path);
 
+      /* open buffered file handle for per-execution writes */
+      afl->affinity_log_fp = fopen(log_path, "a");
+      if (afl->affinity_log_fp) {
+
+        setvbuf(afl->affinity_log_fp, NULL, _IOFBF, 8192);
+
+      }
+
     }
 
     /* Set default config switching params */
@@ -3805,24 +3813,8 @@ int main(int argc, char **argv_orig, char **envp) {
               afl, afl->configs_to_inject_str[afl->current_config_idx]);
           afl->execs_on_config = 0;
 
-          /* Write affinity log entry */
-          if (afl->affinity_log_path) {
-
-            FILE *f = fopen(afl->affinity_log_path, "a");
-            if (f) {
-
-              fprintf(f,
-                      "{\"seed_id\":%u,\"config_idx\":%d,"
-                      "\"max_depth\":%.2f,\"deep_edges\":%u}\n",
-                      afl->queue_cur ? afl->queue_cur->id : 0,
-                      afl->current_config_idx,
-                      afl->queue_cur ? afl->queue_cur->depth_info.max_combined_depth : 0.0,
-                      afl->queue_cur ? afl->queue_cur->depth_info.deep_edge_count : 0);
-              fclose(f);
-
-            }
-
-          }
+          /* flush affinity log (entries written per-exec in common_fuzz_stuff) */
+          if (afl->affinity_log_fp) { fflush(afl->affinity_log_fp); }
 
         }
 
@@ -4048,6 +4040,7 @@ stop_fuzzing:
   if (afl->temp_config_file_path) { ck_free(afl->temp_config_file_path); }
   if (afl->depth_model_path) { ck_free(afl->depth_model_path); }
   if (afl->grammar_file) { ck_free(afl->grammar_file); }
+  if (afl->affinity_log_fp) { fclose(afl->affinity_log_fp); }
   if (afl->affinity_log_path) { ck_free(afl->affinity_log_path); }
   if (afl->configuration_file) { ck_free(afl->configuration_file); }
 

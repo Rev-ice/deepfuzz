@@ -139,6 +139,29 @@ def main():
     if args.mode == "init":
         init_config_pool(args.target, args.afl_output, args.count)
 
+        # Run warmup calibration if depth model and seeds are available
+        if args.depth_model and args.afl_output:
+            try:
+                from deepfuzz_warmup import run_warmup
+                import os as _os
+                seed_dir = _os.path.join(args.afl_output, "..", "seeds")
+                if not _os.path.isdir(seed_dir):
+                    seed_dir = _os.path.join(args.afl_output, "queue")
+                config_path = _os.path.join(args.afl_output, "config_set.json")
+                configs = []
+                if _os.path.isfile(config_path):
+                    with open(config_path) as f:
+                        configs = [l.strip() for l in f if l.strip()][:3]
+                run_warmup(
+                    binary="",
+                    depth_model_path=args.depth_model,
+                    seed_dir=seed_dir,
+                    configs=configs,
+                    output_dir=args.afl_output,
+                )
+            except Exception:
+                pass  # warmup is optional
+
     elif args.mode == "daemon":
         if not args.depth_model:
             print("[!] --depth-model required for daemon mode")

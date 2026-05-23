@@ -3685,8 +3685,6 @@ uint32_t ijon_memdist(char *a, char *b, size_t len) {
  * All callbacks marked no_instrument_function to prevent recursion.
  */
 
-#ifdef DEEPFUZZ_DEPTH
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3779,6 +3777,4 @@ void __cyg_profile_func_exit(void *func, void *caller) {
   }
 
 }
-
-#endif /* DEEPFUZZ_DEPTH */
 

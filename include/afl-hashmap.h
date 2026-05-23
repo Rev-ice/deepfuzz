@@ -1,6 +1,9 @@
 /*
-   DeepFuzz -- option hashmap header (extracted from VAFuzz)
+   DeepFuzz -- option hashmap header
    ------------------------------------
+   Retained from VAFuzz (UTD-FAST-Lab/VAFuzz).
+   Used for config string hashing in afl-variability.c.
+   No modifications from original.
  */
 
 #ifndef AFL_HASHMAP_H

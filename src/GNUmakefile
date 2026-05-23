@@ -504,7 +504,7 @@ src/afl-variability.o: $(COMM_HDR) src/afl-variability.c include/afl-variability
 	$(CC) $(CFLAGS) $(CFLAGS_FLTO) $(SPECIAL_PERFORMANCE) $(shell pkg-config --cflags json-c 2>/dev/null) -c src/afl-variability.c -o src/afl-variability.o
 
 src/deepfuzz-depth.o: $(COMM_HDR) src/deepfuzz-depth.c include/deepfuzz-depth.h include/afl-fuzz.h
-	$(CC) $(CFLAGS) $(CFLAGS_FLTO) $(SPECIAL_PERFORMANCE) -c src/deepfuzz-depth.c -o src/deepfuzz-depth.o
+	$(CC) $(CFLAGS) $(CFLAGS_FLTO) $(SPECIAL_PERFORMANCE) $(shell pkg-config --cflags json-c 2>/dev/null) -c src/deepfuzz-depth.c -o src/deepfuzz-depth.o
 
 afl-fuzz: $(COMM_HDR) include/afl-fuzz.h $(AFL_FUZZ_FILES) src/afl-common.o src/afl-sharedmem.o src/afl-forkserver.o src/afl-performance.o src/afl-hashmap.o src/afl-variability.o src/deepfuzz-depth.o include/cmplog.h include/envs.h include/afl-hashmap.h include/afl-variability.h include/deepfuzz-depth.h | test_x86
 	$(CC) $(CFLAGS) $(COMPILE_STATIC) $(CFLAGS_FLTO) $(SPECIAL_PERFORMANCE) $(AFL_FUZZ_FILES) src/afl-common.o src/afl-sharedmem.o src/afl-forkserver.o src/afl-performance.o src/afl-hashmap.o src/afl-variability.o src/deepfuzz-depth.o -o $@ $(PYFLAGS) $(LDFLAGS) -lm $(shell pkg-config --libs json-c 2>/dev/null || echo "-ljson-c")

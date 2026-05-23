@@ -17,78 +17,9 @@
 #include <math.h>
 #include <sys/shm.h>
 
-/* ---------- Simple JSON parser for depth_model.json ----------
- *
- * Expected format:
- * {
- *   "map_size": 65536,
- *   "max_depth": 12.67,
- *   "edges": {
- *     "1234": { "combined": 4.67, "inter": 4.0, "intra": 0.67 },
- *     ...
- *   }
- * }
- *
- * We use a bare-minimum parser to avoid depending on json-c for the depth model.
- */
+/* ---------- JSON depth model loader (uses json-c) ---------- */
 
-static char *json_get_string_value(const char *json, const char *key) {
-
-  char search[256];
-  snprintf(search, sizeof(search), "\"%s\"", key);
-
-  const char *pos = strstr(json, search);
-  if (!pos) { return NULL; }
-
-  pos = strchr(pos, ':');
-  if (!pos) { return NULL; }
-  pos++;
-
-  /* skip whitespace */
-  while (*pos == ' ' || *pos == '\t' || *pos == '\n') { pos++; }
-
-  if (*pos != '"') { return NULL; }
-  pos++;
-
-  const char *end = strchr(pos, '"');
-  if (!end) { return NULL; }
-
-  size_t len = end - pos;
-  char *val = ck_alloc(len + 1);
-  memcpy(val, pos, len);
-  val[len] = '\0';
-
-  return val;
-
-}
-
-static double json_get_number_value(const char *json, const char *key) {
-
-  char *str = json_get_string_value(json, key);
-  if (str) {
-
-    double v = atof(str);
-    ck_free(str);
-    return v;
-
-  }
-
-  /* try raw number (not quoted) */
-  char search[256];
-  snprintf(search, sizeof(search), "\"%s\"", key);
-
-  const char *pos = strstr(json, search);
-  if (!pos) { return 0.0; }
-
-  pos = strchr(pos, ':');
-  if (!pos) { return 0.0; }
-  pos++;
-
-  while (*pos == ' ' || *pos == '\t' || *pos == '\n') { pos++; }
-
-  return atof(pos);
-
-}
+#include <json-c/json.h>
 
 void deepfuzz_load_depth_model(void *state, const char *json_path) {
 
@@ -96,122 +27,61 @@ void deepfuzz_load_depth_model(void *state, const char *json_path) {
 
   if (!json_path) { return; }
 
-  FILE *f = fopen(json_path, "r");
-  if (!f) {
+  struct json_object *root = json_object_from_file(json_path);
+  if (!root) {
 
-    WARNF("Could not open depth model file: %s", json_path);
+    WARNF("Could not parse depth model file: %s", json_path);
     return;
 
   }
-
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET);
-
-  if (fsize <= 0 || fsize > 50 * 1024 * 1024) {  /* 50 MB max */
-
-    WARNF("Depth model file too large or empty: %s", json_path);
-    fclose(f);
-    return;
-
-  }
-
-  char *json_buf = ck_alloc(fsize + 1);
-  if (fread(json_buf, 1, fsize, f) != (size_t)fsize) {
-
-    WARNF("Could not read depth model file: %s", json_path);
-    ck_free(json_buf);
-    fclose(f);
-    return;
-
-  }
-
-  json_buf[fsize] = '\0';
-  fclose(f);
 
   /* parse map_size */
-  u32 map_size = (u32)json_get_number_value(json_buf, "map_size");
-  if (map_size == 0) { map_size = 65536; }
+  struct json_object *j_map_size;
+  u32 map_size = 65536;
+  if (json_object_object_get_ex(root, "map_size", &j_map_size)) {
+
+    map_size = (u32)json_object_get_int(j_map_size);
+
+  }
 
   /* parse max_depth */
-  double max_depth = json_get_number_value(json_buf, "max_depth");
-  if (max_depth <= 0.0) { max_depth = 1.0; }
+  struct json_object *j_max_depth;
+  double max_depth = 1.0;
+  if (json_object_object_get_ex(root, "max_depth", &j_max_depth)) {
+
+    max_depth = json_object_get_double(j_max_depth);
+
+  }
 
   /* allocate entries */
   depth_entry_t *entries = ck_alloc(sizeof(depth_entry_t) * map_size);
 
   /* parse edges */
-  const char *edges_start = strstr(json_buf, "\"edges\"");
-  if (edges_start) {
+  struct json_object *j_edges;
+  if (json_object_object_get_ex(root, "edges", &j_edges)) {
 
-    const char *obj_start = strchr(edges_start, '{');
-    if (obj_start) {
+    json_object_object_foreach(j_edges, key, val) {
 
-      /* iterate through edge_id keys */
-      const char *p = obj_start + 1;
+      u32 edge_id = (u32)atoi(key);
+      if (edge_id >= map_size) { continue; }
 
-      while (*p) {
+      struct json_object *j_combined, *j_inter, *j_intra;
 
-        /* skip whitespace */
-        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') { p++; }
+      if (json_object_object_get_ex(val, "combined", &j_combined)) {
 
-        if (*p == '}' || *p == '\0') { break; }
+        entries[edge_id].combined_depth = json_object_get_double(j_combined);
 
-        if (*p == '"') {
+      }
 
-          p++;
-          const char *key_end = strchr(p, '"');
-          if (!key_end) { break; }
+      if (json_object_object_get_ex(val, "inter", &j_inter)) {
 
-          /* parse edge_id */
-          char key_buf[32];
-          size_t key_len = key_end - p;
-          if (key_len >= sizeof(key_buf)) { key_len = sizeof(key_buf) - 1; }
-          memcpy(key_buf, p, key_len);
-          key_buf[key_len] = '\0';
-          u32 edge_id = (u32)atoi(key_buf);
+        entries[edge_id].inter_depth = json_object_get_double(j_inter);
 
-          if (edge_id < map_size) {
+      }
 
-            /* find value object */
-            const char *val = strchr(key_end, '{');
-            if (val) {
+      if (json_object_object_get_ex(val, "intra", &j_intra)) {
 
-              const char *val_end = strchr(val, '}');
-              if (val_end) {
-
-                /* extract sub-JSON for this edge */
-                size_t sub_len = val_end - val + 1;
-                char *sub_json = ck_alloc(sub_len + 1);
-                memcpy(sub_json, val, sub_len);
-                sub_json[sub_len] = '\0';
-
-                entries[edge_id].combined_depth =
-                    json_get_number_value(sub_json, "combined");
-                entries[edge_id].inter_depth =
-                    json_get_number_value(sub_json, "inter");
-                entries[edge_id].intra_depth =
-                    json_get_number_value(sub_json, "intra");
-
-                ck_free(sub_json);
-
-              }
-
-            }
-
-          }
-
-          p = key_end + 1;
-
-        } else if (*p == ',') {
-
-          p++;
-
-        } else {
-
-          p++;
-
-        }
+        entries[edge_id].intra_depth = json_object_get_double(j_intra);
 
       }
 
@@ -219,7 +89,7 @@ void deepfuzz_load_depth_model(void *state, const char *json_path) {
 
   }
 
-  ck_free(json_buf);
+  json_object_put(root);
 
   /* store in afl_state */
   afl->depth_model.entries = entries;

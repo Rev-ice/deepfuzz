@@ -1525,6 +1525,25 @@ u8 __attribute__((hot)) common_fuzz_stuff(afl_state_t *afl, u8 *out_buf,
 
       }
 
+      /* DeepFuzz: write per-execution affinity log entry (buffered IO) */
+      if (afl->affinity_log_fp && afl->queue_cur) {
+
+        fprintf(afl->affinity_log_fp,
+                "{\"config_idx\":%d,\"max_depth\":%.2f,"
+                "\"deep_edges\":%u,\"new_bits\":%d}\n",
+                config_counter,
+                afl->queue_cur->depth_info.max_combined_depth,
+                afl->queue_cur->depth_info.deep_edge_count,
+                cur_new_bits > 0 ? 1 : 0);
+        afl->affinity_log_count++;
+
+        /* flush every 100 entries */
+        if (!(afl->affinity_log_count % 100)) {
+          fflush(afl->affinity_log_fp);
+        }
+
+      }
+
     } /* end config loop */
 
     /* Merge: use max trace bits across all configs */

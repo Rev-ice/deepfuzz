@@ -1,8 +1,11 @@
 /*
-   DeepFuzz -- variability / config injection (trimmed from VAFuzz)
+   DeepFuzz -- variability / config injection implementation
    ------------------------------------
-   Retained: config injection, argv havoc, grammar parsing
-   Removed:  Z3/PC/regression logic, variability_driver
+   Trimmed from VAFuzz (UTD-FAST-Lab/VAFuzz).
+   Retained: config injection, argv havoc, grammar parsing.
+   Removed:  Z3/PC/regression logic, variability_driver, GSL dependency.
+   Simplified: argv_havoc uses 8 simple mutation types instead of full
+   AFL++ havoc engine (config bitmaps are small, ~few dozen bytes).
  */
 
 #include "afl-variability.h"
